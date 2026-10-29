@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Personal Expense Tracker</title>
+
+    <style>
+
+        body{
+            font-family: Arial;
+            width: 800px;
+            margin: auto;
+        }
+
+        input{
+            margin:5px;
+            padding:8px;
+        }
+
+        button{
+            padding:8px 15px;
+            margin:5px;
+        }
+
+        table{
+            width:100%;
+            border-collapse: collapse;
+            margin-top:20px;
+        }
+
+        table,th,td{
+            border:1px solid black;
+        }
+
+        th,td{
+            padding:10px;
+            text-align:left;
+        }
+
+        #message{
+            margin-top:10px;
+            font-weight:bold;
+        }
+
+        #total{
+            margin-top:20px;
+            font-size:20px;
+            color:green;
+        }
+
+    .modal{
+    display:none;
+    position:fixed;
+    z-index:1000;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+    background-color:rgba(0,0,0,0.5);
+}
+
+.modal-content{
+    background:white;
+    width:400px;
+    margin:100px auto;
+    padding:20px;
+    border-radius:8px;
+}
+
+.close{
+    float:right;
+    cursor:pointer;
+    font-size:24px;
+    color:red;
+}
+    </style>
+
+</head>
+
+<body>
+
+    <h2>Personal Expense Tracker</h2>
+
+    <input type="number" id="expenseId" placeholder="Expense ID">
+
+    <input type="text" id="description"
+           placeholder="Description">
+
+    <input type="number" id="amount"
+           placeholder="Amount">
+
+    <input type="text" id="category"
+           placeholder="Category">
+
+    <br>
+
+    <button onclick="addExpense()">Add Expense</button>
+
+    <button onclick="updateExpense()">Update Expense</button>
+
+    <button onclick="deleteExpense()">Delete Expense</button>
+
+    <button onclick="viewExpenses()">View Expenses</button>
+
+    <button onclick="viewReport()">View Report</button>
+
+    <div id="message"></div>
+
+    <div id="total"></div>
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Category</th>
+            </tr>
+
+        </thead>
+
+        <tbody id="expenseTable">
+
+        </tbody>
+
+    </table>
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000";
+
+function showMessage(msg,color="green"){
+    document.getElementById("message").innerHTML = msg;
+    document.getElementById("message").style.color = color;
+}
+
+
+async function addExpense(){
+
+    const expense = {
+
+        expense_id: Number(
+            document.getElementById("expenseId").value
+        ),
+
+        description:
+            document.getElementById("description").value,
+
+        amount: Number(
+            document.getElementById("amount").value
+        ),
+
+        category:
+            document.getElementById("category").value
+    };
+
+    try{
+
+        const response = await fetch(`${API_URL}/expenses`,{
+
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify(expense)
+        });
+
+        const data = await response.json();
+
+        if(response.ok){
+            showMessage(data.message);
+            viewExpenses();
+        }
+        else{
+            showMessage(data.detail,"red");
+        }
+
+    }
+    catch(error){
+        showMessage(error.message,"red");
+    }
+}
+
+
+async function viewExpenses(){
+
+    const response =
+        await fetch(`${API_URL}/expenses`);
+
+    const expenses = await response.json();
+
+    const table =
+        document.getElementById("expenseTable");
+
+    table.innerHTML="";
+
+    let totalAmount = 0;
+
+    expenses.forEach(expense => {
+
+        totalAmount += expense.amount;
+
+        table.innerHTML += `
+            <tr>
+                <td>${expense.expense_id}</td>
+                <td>${expense.description}</td>
+                <td>${expense.amount}</td>
+                <td>${expense.category}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("total").innerHTML =
+        `Total Amount Spent: ₹${totalAmount}`;
+}
+
+
+async function updateExpense(){
+
+    const id =
+      Number(document.getElementById("expenseId").value);
+
+    const expense = {
+
+        expense_id:id,
+
+        description:
+          document.getElementById("description").value,
+
+        amount:Number(
+          document.getElementById("amount").value
+        ),
+
+        category:
+          document.getElementById("category").value
+    };
+
+    try{
+
+        const response = await fetch(
+            `${API_URL}/expenses/${id}`,
+            {
+                method:"PUT",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify(expense)
+            }
+        );
+
+        const data = await response.json();
+
+        if(response.ok){
+            showMessage(data.message);
+            viewExpenses();
+        }
+        else{
+            showMessage(data.detail,"red");
+        }
+    }
+    catch(error){
+        showMessage(error.message,"red");
+    }
+
+}
+
+
+async function deleteExpense(){
+
+    const id =
+        Number(document.getElementById("expenseId").value);
+
+    try{
+
+        const response = await fetch(
+            `${API_URL}/expenses/${id}`,
+            {
+                method:"DELETE"
+            }
+        );
+
+        const data = await response.json();
+
+        if(response.ok){
+            showMessage(data.message);
+            viewExpenses();
+        }
+        else{
+            showMessage(data.detail,"red");
+        }
+
+    }
+    catch(error){
+        showMessage(error.message,"red");
+    }
+
+}
+
+viewExpenses();
+
+async function viewReport(){
+
+    const id = Number(
+        document.getElementById("expenseId").value
+    );
+
+    if(!id){
+        showMessage("Enter Expense ID","red");
+        return;
+    }
+
+    try{
+
+        const response = await fetch(
+            `${API_URL}/expenses/${id}`
+        );
+
+        const data = await response.json();
+
+        if(response.ok){
+
+            document.getElementById("reportContent")
+            .innerHTML = `
+                <p><b>Expense ID:</b>
+                ${data.expense_id}</p>
+
+                <p><b>Description:</b>
+                ${data.description}</p>
+
+                <p><b>Amount:</b>
+                ₹${data.amount}</p>
+
+                <p><b>Category:</b>
+                ${data.category}</p>
+            `;
+
+            document.getElementById(
+                "reportModal"
+            ).style.display = "block";
+        }
+        else{
+            showMessage(data.detail,"red");
+        }
+
+    }
+    catch(error){
+        showMessage(error.message,"red");
+    }
+}
+
+function closeReport(){
+    document.getElementById(
+        "reportModal"
+    ).style.display = "none";
+}
+</script>
+
+<div id="reportModal" class="modal">
+
+    <div class="modal-content">
+
+        <span class="close"
+              onclick="closeReport()">&times;</span>
+
+        <h2>Expense Report</h2>
+
+        <div id="reportContent"></div>
+
+    </div>
+
+</div>
+</body>
+</html>
